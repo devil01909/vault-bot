@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>টেলিগ্রাম ভল্ট</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: var(--tg-theme-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #333);
+            padding: 16px;
+        }
+        .header {
+            background: var(--tg-theme-secondary-bg-color, white);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            font-size: 20px;
+            color: var(--tg-theme-button-color, #0088cc);
+        }
+        .stats {
+            display: flex;
+            gap: 8px;
+            font-size: 12px;
+            background: var(--tg-theme-bg-color, #f0f0f0);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+        .search-box {
+            margin-bottom: 16px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--tg-theme-secondary-bg-color, white);
+            color: var(--tg-theme-text-color, #333);
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            outline: none;
+        }
+        .file-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .file-card {
+            background: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .file-card:active {
+            transform: scale(0.98);
+        }
+        .file-icon {
+            font-size: 32px;
+            min-width: 48px;
+            text-align: center;
+        }
+        .file-info {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            word-break: break-word;
+            font-size: 14px;
+        }
+        .file-meta {
+            display: flex;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #666);
+            flex-wrap: wrap;
+        }
+        .file-meta span {
+            background: var(--tg-theme-bg-color, #f0f0f0);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .download-btn {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 80px;
+            text-align: center;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--tg-theme-secondary-bg-color, white);
+            border-radius: 12px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+        .empty-state .emoji {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+        }
+        .upload-btn {
+            flex: 1;
+            background: var(--tg-theme-button-color, #4CAF50);
+            color: var(--tg-theme-button-text-color, white);
+            border: none;
+            padding: 14px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .refresh-btn {
+            background: var(--tg-theme-secondary-bg-color, white);
+            color: var(--tg-theme-text-color, #333);
+            border: none;
+            padding: 14px 20px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+        .file-id-badge {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📁 টেলিগ্রাম ভল্ট</h1>
+        <div class="stats" id="stats">
+            <span id="fileCount">0</span> ফাইল
+        </div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 ফাইল খুঁজুন..." onkeyup="filterFiles()">
+    </div>
+
+    <div id="fileGrid" class="file-grid"></div>
+    <div id="loading" class="loading">⏳ লোড হচ্ছে...</div>
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="emoji">📭</div>
+        <div>কোন ফাইল নেই</div>
+        <div style="font-size: 14px; margin-top: 8px;">উপরে আপলোড বাটনে ক্লিক করুন</div>
+    </div>
+
+    <div class="footer">
+        <button class="upload-btn" onclick="uploadFile()">📤 ফাইল আপলোড</button>
+        <button class="refresh-btn" onclick="loadFiles()">🔄</button>
+    </div>
+
+    <script>
+        const tg = Telegram.WebApp;
+        tg.expand();
+        
+        let allFiles = [];
+
+        function formatSize(size) {
+            if (!size) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (size >= 1024 && i < units.length - 1) {
+                size /= 1024;
+                i++;
+            }
+            return size.toFixed(1) + ' ' + units[i];
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('bn-BD', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function getFileIcon(type) {
+            if (type.includes('ছবি') || type.includes('image')) return '🖼️';
+            if (type.includes('ভিডিও') || type.includes('video')) return '🎬';
+            if (type.includes('অডিও') || type.includes('audio')) return '🎵';
+            if (type.includes('ডকুমেন্ট') || type.includes('document')) return '📄';
+            return '📁';
+        }
+
+        function filterFiles() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allFiles.filter(f => 
+                f.name.toLowerCase().includes(searchTerm) ||
+                (f.uploader && f.uploader.toLowerCase().includes(searchTerm))
+            );
+            renderFiles(filtered);
+        }
+
+        function renderFiles(files) {
+            const grid = document.getElementById('fileGrid');
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('emptyState');
+            
+            loading.style.display = 'none';
+            
+            if (files.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            let html = '';
+            files.forEach(file => {
+                html += `
+                    <div class="file-card" onclick="downloadFile(${file.id})">
+                        <div class="file-icon">${getFileIcon(file.type)}</div>
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-meta">
+                                <span>📦 ${file.size_str || formatSize(file.size)}</span>
+                                <span>👤 ${file.uploader || 'Unknown'}</span>
+                                <span>📅 ${file.date ? formatDate(file.date) : ''}</span>
+                                <span class="file-id-badge">#${file.id}</span>
+                            </div>
+                        </div>
+                        <div class="download-btn">ডাউনলোড</div>
+                    </div>
+                `;
+            });
+            
+            grid.innerHTML = html;
+            document.getElementById('fileCount').innerText = allFiles.length;
+        }
+
+        async function loadFiles() {
+            const loading = document.getElementById('loading');
+            const grid = document.getElementById('fileGrid');
+            
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+            
+            try {
+                tg.sendData(JSON.stringify({action: 'get_files'}));
+            } catch (err) {
+                console.error(err);
+                loading.style.display = 'none';
+            }
+        }
+
+        function downloadFile(fileId) {
+            tg.sendData(JSON.stringify({
+                action: 'download',
+                file_id: fileId
+            }));
+            tg.showAlert('ডাউনলোড শুরু হয়েছে! বট চেক করুন।');
+        }
+
+        function uploadFile() {
+            tg.sendData(JSON.stringify({action: 'upload'}));
+            tg.showAlert('এখন বটে ফাইল পাঠান');
+        }
+
+        // Listen for data from bot
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.files) {
+                allFiles = event.data.files;
+                renderFiles(allFiles);
+            }
+        });
+
+        tg.onEvent('webAppReady', loadFiles);
+        
+        // Initial load
+        loadFiles();
+    </script>
+</body>
+</html>
